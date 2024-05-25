@@ -1,18 +1,25 @@
 #!/usr/bin/env python3
-import requests, time, sys
+import requests, time, sys, os
 from requests.auth import HTTPBasicAuth
 
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Diese Daten müssen angepasst werden:
-serial = "112100000000" # Seriennummer des Hoymiles Wechselrichters
-maximum_wr = 300 # Maximale Ausgabe des Wechselrichters
-minimum_wr = 100 # Minimale Ausgabe des Wechselrichters
+serial = os.getenv('DTU_INVERTER_SERIAL') # Seriennummer des Hoymiles Wechselrichters
+maximum_wr = 150 # Maximale Ausgabe des Wechselrichters
+minimum_wr =0 # Minimale Ausgabe des Wechselrichters
 
-dtu_ip = '192.100.100.20' # IP Adresse von OpenDTU
-dtu_nutzer = 'admin' # OpenDTU Nutzername
-dtu_passwort = 'openDTU42' # OpenDTU Passwort
+dtu_ip = os.getenv('DTU_IP') # '192.168.2.148' # IP Adresse von OpenDTU
+dtu_nutzer = os.getenv('DTU_USER') # 'admin' # OpenDTU Nutzername
+dtu_passwort = os.getenv("DTU_PASSWORD") # OpenDTU Passwort
 
-shelly_ip = '192.100.100.30' # IP Adresse von Shelly 3EM
+# shelly_ip = '192.100.100.30' # IP Adresse von Shelly 3EM
+tasmota_ip = os.getenv('TASMOTA_IP') # IP Adresse von Tasmota
+
+# Schreibe Configurationsdaten
+print(f'Inverter Serial: {serial} \nDTU IP: {dtu_ip} \nDTU Nutzer: {dtu_nutzer} \nDTU Passwort: {dtu_passwort} \nTasmota IP: {tasmota_ip}')
 
 
 while True:
@@ -26,15 +33,31 @@ while True:
         altes_limit = int(r['inverters'][0]['limit_absolute']) # Altes Limit
         power_dc    = r['inverters'][0]['AC']['0']['Power DC']['v']  # Lieferung DC vom Panel
         power       = r['inverters'][0]['AC']['0']['Power']['v'] # Abgabe BKW AC in Watt
+
+        # print current values
+        print(f'Produktion: {producing  } W, Limit: {altes_limit} W, DC: {power_dc} W, AC: {power} W')
     except:
         print('Fehler beim Abrufen der Daten von openDTU')
     try:
+        # Lese daten aus tasmota API <TASMOTA_IP>/cm?cmnd=status%208
+        # Beispieldaten:
+        # {"StatusSNS":{"Time":"2024-05-25T19:36:02","DTZ":{"E_in":5211.131,"E_out":17.899,"Power":800,"volt_p1":0.0,"volt_p2":0.0,"volt_p3":0.0,"amp_p1":0.0,"amp_p2":0.0,"amp_p3":0.0,"phase_angle_l2_l1":0.0,"phase_angle_l3_l1":0.0,"phase_angle_p1":0.0,"phase_angle_p2":0.0,"phase_angle_p3":0.0,"freq":0}}}
+        # Power = Aktueller Bezug in Watt
+        tasmota_data = requests.get(f'http://{tasmota_ip}/cm?cmnd=status%208').json()
+        grid_sum = tasmota_data['StatusSNS']['DTZ']['Power']
+
+
         # Nimmt Daten von der Shelly 3EM Rest-API und übersetzt sie in ein json-Format
-        phase_a     = requests.get(f'http://{shelly_ip}/emeter/0', headers={'Content-Type': 'application/json'}).json()['power']
-        phase_b     = requests.get(f'http://{shelly_ip}/emeter/1', headers={'Content-Type': 'application/json'}).json()['power']
-        phase_c     = requests.get(f'http://{shelly_ip}/emeter/2', headers={'Content-Type': 'application/json'}).json()['power']
-        grid_sum    = phase_a + phase_b + phase_c # Aktueller Bezug - rechnet alle Phasen zusammen
+        # phase_a     = requests.get(f'http://{shelly_ip}/emeter/0', headers={'Content-Type': 'application/json'}).json()['power']
+        # phase_b     = requests.get(f'http://{shelly_ip}/emeter/1', headers={'Content-Type': 'application/json'}).json()['power']
+        # phase_c     = requests.get(f'http://{shelly_ip}/emeter/2', headers={'Content-Type': 'application/json'}).json()['power']
+        # grid_sum    = phase_a + phase_b + phase_c # Aktueller Bezug - rechnet alle Phasen zusammen
+
+        # print current values
+        print(f'Bezug: {grid_sum} W')
     except:
+        # print exception
+
         print('Fehler beim Abrufen der Daten von Shelly 3EM')
 
     # Werte setzen
