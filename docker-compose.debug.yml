@@ -8,6 +8,7 @@ services:
     environment:
       PYTHONUNBUFFERED: 1
     env_file:
-      - .env
+      # portainer compatible
+      - stack.env
     ports:
       - 5678:5678

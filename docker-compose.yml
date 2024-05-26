@@ -4,4 +4,5 @@ services:
       context: .
       dockerfile: Dockerfile
     env_file:
-      - .env
+      # portainer compatible
+      - stack.env
