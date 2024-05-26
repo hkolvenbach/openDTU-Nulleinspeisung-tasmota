@@ -8,8 +8,22 @@ load_dotenv()
 
 # Diese Daten müssen angepasst werden:
 serial = os.getenv('DTU_INVERTER_SERIAL') # Seriennummer des Hoymiles Wechselrichters
-maximum_wr = 150 # Maximale Ausgabe des Wechselrichters
-minimum_wr =0 # Minimale Ausgabe des Wechselrichters
+maximum_wr = int(os.getenv('DTU_INVERTER_MAX_POWER')) # Maximale Ausgabe des Wechselrichters
+minimum_wr = int(os.getenv('DTU_INVERTER_MIN_POWER')) # Minimale Ausgabe des Wechselrichters
+
+# check that max power is below 800W
+if maximum_wr > 800:
+    print('Maximum power is above 800W. Please check your configuration.')
+    sys.exit(1)
+
+# check that min power is above 0W
+if minimum_wr < 0:
+    print('Minimum power is below 0W. Please check your configuration.')
+    sys.exit(1)
+
+# print min and max power
+print(f'Minimum power: {minimum_wr} W, Maximum power: {maximum_wr} W')
+
 
 dtu_ip = os.getenv('DTU_IP') # '192.168.2.148' # IP Adresse von OpenDTU
 dtu_nutzer = os.getenv('DTU_USER') # 'admin' # OpenDTU Nutzername
@@ -19,7 +33,7 @@ dtu_passwort = os.getenv("DTU_PASSWORD") # OpenDTU Passwort
 tasmota_ip = os.getenv('TASMOTA_IP') # IP Adresse von Tasmota
 
 # Schreibe Configurationsdaten
-print(f'Inverter Serial: {serial} \nDTU IP: {dtu_ip} \nDTU Nutzer: {dtu_nutzer} \nDTU Passwort: {dtu_passwort} \nTasmota IP: {tasmota_ip}')
+print(f'Inverter Serial: {serial} \nDTU IP: {dtu_ip} \nDTU Nutzer: {dtu_nutzer} \nDTU Passwort: **MASKED** \nTasmota IP: {tasmota_ip}')
 
 
 while True:
@@ -35,7 +49,7 @@ while True:
         power       = r['inverters'][0]['AC']['0']['Power']['v'] # Abgabe BKW AC in Watt
 
         # print current values
-        print(f'Produktion: {producing  } W, Limit: {altes_limit} W, DC: {power_dc} W, AC: {power} W')
+        print(f'Produktion: DC: {round(power_dc,1)} W, AC: {round(power,1)} W, Altes Limit: {round(altes_limit,1)} W')
     except:
         print('Fehler beim Abrufen der Daten von openDTU')
     try:
@@ -58,7 +72,7 @@ while True:
     except:
         # print exception
 
-        print('Fehler beim Abrufen der Daten von Shelly 3EM')
+        print('Fehler beim Abrufen der Daten vom Stromzähler')
 
     # Werte setzen
     print(f'\nBezug: {round(grid_sum, 1)} W, Produktion: {round(power, 1)} W, Verbrauch: {round(grid_sum + power, 1)} W')

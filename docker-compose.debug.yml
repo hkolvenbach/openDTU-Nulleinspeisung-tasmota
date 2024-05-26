@@ -1,0 +1,13 @@
+services:
+  nulleinspeisung:
+    build:
+      context: .
+      dockerfile: Dockerfile.debug
+    command: >
+      ptvsd --host 0.0.0.0 --port 5678 --wait nulleinspeisung.py
+    environment:
+      PYTHONUNBUFFERED: 1
+    env_file:
+      - .env
+    ports:
+      - 5678:5678
