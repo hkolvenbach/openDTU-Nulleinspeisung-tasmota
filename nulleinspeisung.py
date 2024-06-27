@@ -35,21 +35,30 @@ tasmota_ip = os.getenv('TASMOTA_IP') # IP Adresse von Tasmota
 # Schreibe Configurationsdaten
 print(f'Inverter Serial: {serial} \nDTU IP: {dtu_ip} \nDTU Nutzer: {dtu_nutzer} \nDTU Passwort: **MASKED** \nTasmota IP: {tasmota_ip}')
 
+# set defaults
+power = 0
+power_dc = 0
+grid_sum = 0
+setpoint = 0
+altes_limit = 0
+
 
 while True:
     try:
         # Nimmt Daten von der openDTU Rest-API und übersetzt sie in ein json-Format
-        r = requests.get(url = f'http://{dtu_ip}/api/livedata/status/inverters' ).json()
+        r = requests.get(url = f'http://{dtu_ip}/api/livedata/status?inv={serial}' ).json()
 
         # Selektiert spezifische Daten aus der json response
         reachable   = r['inverters'][0]['reachable'] # Ist DTU erreichbar?
         producing   = int(r['inverters'][0]['producing']) # Produziert der Wechselrichter etwas?
         altes_limit = int(r['inverters'][0]['limit_absolute']) # Altes Limit
-        power_dc    = r['inverters'][0]['AC']['0']['Power DC']['v']  # Lieferung DC vom Panel
+        # since OpenDTU on battery 2024.2.12  https://github.com/helgeerbe/OpenDTU-OnBattery/wiki/Web-API#important-notes
+        power_dc    = r['inverters'][0]['DC']['0']['Power']['v']  # Lieferung DC vom Panel
         power       = r['inverters'][0]['AC']['0']['Power']['v'] # Abgabe BKW AC in Watt
 
         # print current values
         print(f'Produktion: DC: {round(power_dc,1)} W, AC: {round(power,1)} W, Altes Limit: {round(altes_limit,1)} W')
+
     except:
         print('Fehler beim Abrufen der Daten von openDTU')
     try:
